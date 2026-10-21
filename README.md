@@ -1,6 +1,6 @@
 # nhi-protection
 
-This lab is about protecting non-human identities. This lab has four parts: write the scanner, run it as a git pre-commit hook (local gate), run it again as a GitHub Actions stage (pipeline gate), and then test both with fake keys.
+This lab is about protecting non-human identities. It has four parts: write the scanner, run it as a git pre-commit hook (local gate), run it again as a GitHub Actions stage (pipeline gate), and then test both with fake keys.
 
 **Step 1: Setting up the repo**
 
