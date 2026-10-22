@@ -99,17 +99,18 @@ def main():
     ap.add_argument("--path", default=".")
     args = ap.parse_args()
 
-    paths = staged_files() if args.mode == "staged" else list(all_files(args.path))
+    
+paths = staged_files() if args.mode == "staged" else list(all_files(args.path))
     log.info("Scanning %d file(s) in %s mode", len(paths), args.mode)
     findings = scan_codebase_for_nhis(paths)
 
-    if findings:
+if findings:
         for path, lineno, label, masked in findings:
             log.critical("NHI SECRET DETECTED: %s in %s:%d (%s)", label, path, lineno, masked)
         log.critical("BLOCKED: %d secret(s) found. Remove them, rotate the credential, and retry.", len(findings))
         sys.exit(1)
 
-    log.info("No NHI secrets found. Proceeding.")
+log.info("No NHI secrets found. Proceeding.")
     sys.exit(0)
 
 if __name__ == "__main__":
@@ -137,6 +138,7 @@ The result (see image below) showed a CRITICAL line, and echo $? should print 1,
 Then I deleted the file with this: rm test/fixtures/quick.env
 
 **Step 3: Connect the scanner to git**
+
 Connecting the scanner to git makes the script run every time you commit instead of doing it manually. Git can run your own scripts at certain moments. A pre-commit hook runs right after you type git commit and before the commit is saved. If the hook exits with 1, Git cancels the commit, which is how the scanner’s “block” signal takes effect.
 
 I). Create the hook file. In VS Code’s Explorer panel, right-click > New File > type: _.githooks/pre-commit_
@@ -151,6 +153,7 @@ f). Click Save.
 
 On the pre-commit terminal, paste this in and save: 
 
+
 #!/bin/sh
 python3 scanner/scan_nhis.py --mode staged
 
@@ -162,6 +165,7 @@ Open the VS Code terminal and run: _chmod +x .githooks/pre-commit scanner/scan_n
 Git silently skips hooks that aren’t executable, so leaving this out is the most common reason a hook “doesn’t work.”
 
 III). Tell Git where the hooks are with this command: _git config core.hooksPath .githooks_
+
 By default, git looks for hooks in .git/hooks. That folder is never committed, so a hook placed there exists only on your machine. Pointing git at .githooks keeps the hook in the repo, where it’s version-controlled and visible in your portfolio.
 
 This setting applies to this clone only. Anyone else who clones the repo has to run that command too, which is one reason Step 4 adds CI as the enforced gate.
@@ -259,6 +263,7 @@ The hook should run first and should print [INFO] No NHI secrets found, as shown
 <img width="988" height="539" alt="image" src="https://github.com/user-attachments/assets/5058de1e-8a25-40c4-a38b-25c6c4b851c7" />
 
 **IV). Watch it run on GitHub**
+
 Open your repo on github.com and click the Actions tab. A run called “Add NHI scan CI stage” should appear. Click it, and you should see:
 
 nhi-scan with a green ✅. Click it to see the same [INFO] log lines from the runner.
@@ -267,6 +272,7 @@ deploy with a green ✅, showing the “Deploying…” message.
 <img width="2300" height="1062" alt="image" src="https://github.com/user-attachments/assets/fe5cf35a-f766-4cf5-8be5-9cb0daf93172" />
 
 **Step 5: Save the mock config**
+
 Paste this whole block into the terminal of the nhi-secret-scanner folder:
 
 mkdir -p test/fixtures
@@ -283,6 +289,7 @@ If correct, it should print back the file like this:
 <img width="1197" height="225" alt="image" src="https://github.com/user-attachments/assets/493edb10-6118-4047-b4df-6d9da489edb5" />
 
 **Step 6: Test the local gate**
+
 Test the local gate with this command: 
 
 _git add test/fixtures/mock_config.env
@@ -297,7 +304,8 @@ The run git log to confirm no new commit was created:
 <img width="1164" height="521" alt="image" src="https://github.com/user-attachments/assets/01a67131-f8c7-4eb6-abd8-1774b3441483" />
 
 **Step 7: Test the pipeline gate (simulate a developer bypassing the hook)**
-I). 1. Check the mock file is still staged. In Step 6, the hook blocked the commit, but the file stayed staged. Confirm with: git status. You should see test/fixtures/mock_config.env under “Changes to be committed”: 
+
+I). Check the mock file is still staged. In Step 6, the hook blocked the commit, but the file stayed staged. Confirm with: git status. You should see test/fixtures/mock_config.env under “Changes to be committed”: 
 
 <img width="865" height="224" alt="image" src="https://github.com/user-attachments/assets/4fbaf6d5-55f5-483f-a358-0bf97b2f06ab" />
 
@@ -322,6 +330,7 @@ This is the result:
 <img width="1303" height="705" alt="image" src="https://github.com/user-attachments/assets/a0743cf0-c9b9-402a-865b-1890ce7571ea" />
 
 III). Test the reuslt in your github repo. 
+
 The terminal part ends at the push. To see the result, open your repo on github.com → Actions tab → click the “Simulated bypass” run. You should see:
 
 a)> nhi-scan ❌ failed. Click it to see the CRITICAL log lines: 
