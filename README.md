@@ -201,7 +201,8 @@ And it gave me the CRITICAL alert and no commit (the correct response):
 Then clean up the test file with this command: _git restore --staged test/fixtures/quick.env
 rm test/fixtures/quick.env_
 
-Step 4: Deploy it as a CI/CD stage
+**Step 4: Deploy it as a CI/CD stage**
+
 Currently, the pre-commit hook from Step 3 runs only on your device, and anyone can skip it with git commit --no-verify. That makes it a convenience for developers, not an enforced control. Step 4 runs the same scanner on GitHub’s servers, every time anyone pushes code. It’s the gate nobody can skip:
 
 <img width="1484" height="450" alt="image" src="https://github.com/user-attachments/assets/b4dbb3bb-4abb-4f09-9eef-76c3c8b62335" />
@@ -257,5 +258,83 @@ The hook should run first and should print [INFO] No NHI secrets found, as shown
 
 <img width="988" height="539" alt="image" src="https://github.com/user-attachments/assets/5058de1e-8a25-40c4-a38b-25c6c4b851c7" />
 
+**IV). Watch it run on GitHub**
+Open your repo on github.com and click the Actions tab. A run called “Add NHI scan CI stage” should appear. Click it, and you should see:
 
+nhi-scan with a green ✅. Click it to see the same [INFO] log lines from the runner.
+deploy with a green ✅, showing the “Deploying…” message.
+
+<img width="2300" height="1062" alt="image" src="https://github.com/user-attachments/assets/fe5cf35a-f766-4cf5-8be5-9cb0daf93172" />
+
+**Step 5: Save the mock config**
+Paste this whole block into the terminal of the nhi-secret-scanner folder:
+
+mkdir -p test/fixtures
+cat > test/fixtures/mock_config.env <<'EOF'
+# FAKE credentials for scanner testing only. None of these are real.
+STRIPE_SECRET_KEY=sk_live_51FAKEt3stK3yN0tR3al0000000000
+AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+EOF
+
+Use this command to check the file saved properly: _cat test/fixtures/mock_config.env_
+
+If correct, it should print back the file like this: 
+<img width="1197" height="225" alt="image" src="https://github.com/user-attachments/assets/493edb10-6118-4047-b4df-6d9da489edb5" />
+
+**Step 6: Test the local gate**
+Test the local gate with this command: 
+
+_git add test/fixtures/mock_config.env
+git commit -m "Add config"_
+
+You'll see this result, which shows the device scanner is working: 
+
+<img width="1800" height="320" alt="image" src="https://github.com/user-attachments/assets/01417f29-e9f1-41ec-a541-7e43fa025425" />
+
+The run git log to confirm no new commit was created: 
+
+<img width="1164" height="521" alt="image" src="https://github.com/user-attachments/assets/01a67131-f8c7-4eb6-abd8-1774b3441483" />
+
+**Step 7: Test the pipeline gate (simulate a developer bypassing the hook)**
+I). 1. Check the mock file is still staged. In Step 6, the hook blocked the commit, but the file stayed staged. Confirm with: git status. You should see test/fixtures/mock_config.env under “Changes to be committed”: 
+
+<img width="865" height="224" alt="image" src="https://github.com/user-attachments/assets/4fbaf6d5-55f5-483f-a358-0bf97b2f06ab" />
+
+If it’s listed as untracked or not staged instead, run: git add test/fixtures/mock_config.env
+
+II). Then run the command: 
+
+git checkout -b test/secret-leak
+git commit --no-verify -m "Simulated bypass"
+git push -u origin test/secret-leak
+
+Note: 
+
+a). The first line creates a separate test branch, so main stays clean.
+
+b). The second line commits without running the hook, simulating a developer who bypasses it. You should see a [test/secret-leak …] line and no [INFO] or CRITICAL output.
+
+c). The third line pushes the branch to GitHub, which triggers the workflow.
+
+This is the result: 
+
+<img width="1303" height="705" alt="image" src="https://github.com/user-attachments/assets/a0743cf0-c9b9-402a-865b-1890ce7571ea" />
+
+III). Test the reuslt in your github repo. 
+The terminal part ends at the push. To see the result, open your repo on github.com → Actions tab → click the “Simulated bypass” run. You should see:
+
+a)> nhi-scan ❌ failed. Click it to see the CRITICAL log lines: 
+
+<img width="2568" height="848" alt="image" src="https://github.com/user-attachments/assets/1afd0b95-cf68-4b69-a7b5-f50add1feb5d" />
+
+b) deploy ⊘ skipped: 
+
+<img width="2593" height="636" alt="image" src="https://github.com/user-attachments/assets/03493140-0356-47bb-bb71-c2b54ebfbd74" />
+
+**Step 8: Make the gate mandatory**
+
+Go to Repo > Settings > Branches > Add branch protection rule for main, enable Require status checks to pass > click on Add checks, and add nhi-scan. Without this rule, a failed check is only a warning and someone could still merge. With it, nothing that fails the scan can reach main: 
+
+<img width="2487" height="1581" alt="image" src="https://github.com/user-attachments/assets/1c58b42e-4656-4f42-ad44-f814a7841964" />
 
