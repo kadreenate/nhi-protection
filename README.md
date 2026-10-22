@@ -201,7 +201,61 @@ And it gave me the CRITICAL alert and no commit (the correct response):
 Then clean up the test file with this command: _git restore --staged test/fixtures/quick.env
 rm test/fixtures/quick.env_
 
-Step 4: 
+Step 4: Deploy it as a CI/CD stage
+Currently, the pre-commit hook from Step 3 runs only on your device, and anyone can skip it with git commit --no-verify. That makes it a convenience for developers, not an enforced control. Step 4 runs the same scanner on GitHub’s servers, every time anyone pushes code. It’s the gate nobody can skip:
+
+<img width="1484" height="450" alt="image" src="https://github.com/user-attachments/assets/b4dbb3bb-4abb-4f09-9eef-76c3c8b62335" />
+
+The workflow has two jobs: nhi-scan and a simulated deploy. Deploy is set to run only if the scan passes. That’s how the lab’s requirement to “halt deployment” is met: if a secret is found, the deploy job never starts. Together with Step 3, this gives you defense in depth.
+
+This is how I deployed the CI/CD. 
+
+I). Create the workflow file with this bash command on the ~/nhi-secret-scanner terminal: 
+
+mkdir -p .github/workflows
+touch .github/workflows/nhi-scan.yml
+code .github/workflows/nhi-scan.yml
+
+Note the workflow file must be saved in the .github/workflows/ location. Use this command to confirm the location is current: _ls .github/workflows_
+
+<img width="869" height="143" alt="image" src="https://github.com/user-attachments/assets/c38a24d2-6796-46c1-aa4f-3183cce19629" />
+
+As shown in the image, the correct location is "nhi-scan.yml"
+
+II). Copy and paste the script below in the nhi-scan-yml folder: 
+
+name: NHI Secret Scan
+on:
+  push:
+  pull_request:
+
+jobs:
+  nhi-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Scan for NHI secrets
+        run: python3 scanner/scan_nhis.py --mode full
+
+  deploy:
+    needs: nhi-scan
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deploying... (only reached if the NHI scan passed)"
+
+III). Commit & push
+Use this command to push the script live: 
+
+_git add .github/workflows/nhi-scan.yml
+git commit -m "Add NHI scan CI stage"
+git push_
+
+The hook should run first and should print [INFO] No NHI secrets found, as shown below: 
+
+<img width="988" height="539" alt="image" src="https://github.com/user-attachments/assets/5058de1e-8a25-40c4-a38b-25c6c4b851c7" />
 
 
 
