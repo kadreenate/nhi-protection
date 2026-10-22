@@ -34,7 +34,9 @@ II). Copy and save the script below.
 The script works like a security checkpoint for your code. Before code is committed or deployed, it checks every file for passwords and keys that belong to machines rather than people, and it stops the process if it finds any. It does three things:
 
 a). Searches: It reads your files line by line, looking for text shaped like a real credential, for example anything starting with AKIA (AWS keys) or sk_live_ (Stripe keys).
+
 b). Warns: When it finds one, it prints a CRITICAL alert with the file name and line number, masking most of the key so the alert itself doesn’t expose it.
+
 c). Blocks: It ends with a “fail” signal (exit code 1), which tells git to refuse the commit and tells GitHub Actions to stop the pipeline before deployment.
 
 Summary of what the script does: 
@@ -145,10 +147,15 @@ I). Create the hook file. In VS Code’s Explorer panel, right-click > New File 
 The file name is exactly pre-commit, with no extension (no .sh or .txt). Git looks for that exact name. Then save it by following the steps below (all instructions tailored to Mac commands): 
 
 a). In the dialog, press ⌘ + Shift + G to open a “Go to folder” box.
+
 b). Type ~/nhi-secret-scanner and press Enter.
+
 c). Press ⌘ + Shift + . (period) to show hidden folders. .githooks starts with a dot, so macOS hides it by default.
+
 d). Double-click into .githooks. If it doesn’t exist, click New Folder and name it .githooks. macOS will warn that names starting with a dot are reserved for the system; click Use “.”.
+
 e). In the Save As box, type exactly pre-commit, with no extension. If a file format option appears, leave it as is, and make sure the name doesn’t become pre-commit.txt or pre-commit.sh.
+
 f). Click Save.
 
 On the pre-commit terminal, paste this in and save: 
